@@ -30,15 +30,17 @@ export type ConditionConfig = {
   minApprovals: { [key in CommentAuthorAssociation]?: number },
   requiredReviewers: string[],
   maxRequestedChanges: { [key in CommentAuthorAssociation]?: number },
-  requiredBaseBranches: Pattern[],
-  blockingBaseBranches: Pattern[],
   requiredLabels: Pattern[],
   blockingLabels: Pattern[],
-  blockingBodyRegex: string | undefined
-  requiredBodyRegex: string | undefined
-  blockingTitleRegex: string | undefined
-  requiredTitleRegex: string | undefined
-  requiredAuthorRole: CommentAuthorAssociation
+  requiredLabelsRegex: string[],
+  blockingLabelsRegex: string[],
+  requiredTitleRegex: string | undefined,
+  blockingTitleRegex: string | undefined,
+  requiredBodyRegex: string | undefined,
+  blockingBodyRegex: string | undefined,
+  requiredBaseBranches: Pattern[],
+  blockingBaseBranches: Pattern[],
+  requiredAuthorRole: CommentAuthorAssociation,
 }
 
 export type Config = {
@@ -57,14 +59,16 @@ export const defaultRuleConfig: ConditionConfig = {
   maxRequestedChanges: {
     NONE: 0
   },
+  requiredLabels: [],
+  blockingLabels: [],
+  requiredLabelsRegex: [],
+  blockingLabelsRegex: [],
+  requiredTitleRegex: undefined,
+  blockingTitleRegex: undefined,
+  requiredBodyRegex: undefined,
+  blockingBodyRegex: undefined,
   blockingBaseBranches: [],
   requiredBaseBranches: [],
-  blockingLabels: [],
-  requiredLabels: [],
-  blockingTitleRegex: undefined,
-  blockingBodyRegex: undefined,
-  requiredTitleRegex: undefined,
-  requiredBodyRegex: undefined,
   requiredAuthorRole: CommentAuthorAssociation.NONE
 }
 
@@ -105,11 +109,13 @@ const conditionConfigDecoder: Decoder<ConditionConfig> = object({
   blockingBaseBranches: array(patternDecoder),
   requiredLabels: array(patternDecoder),
   blockingLabels: array(patternDecoder),
-  blockingTitleRegex: optional(string()),
-  blockingBodyRegex: optional(string()),
+  requiredLabelsRegex: array(string()),
+  blockingLabelsRegex: array(string()),
   requiredTitleRegex: optional(string()),
+  blockingTitleRegex: optional(string()),
   requiredBodyRegex: optional(string()),
-  requiredAuthorRole: commentAuthorAssociation
+  blockingBodyRegex: optional(string()),
+  requiredAuthorRole: commentAuthorAssociation,
 })
 
 const configDecoder: Decoder<Config> = object({
@@ -117,14 +123,16 @@ const configDecoder: Decoder<Config> = object({
   minApprovals: reviewConfigDecover,
   requiredReviewers: array(string()),
   maxRequestedChanges: reviewConfigDecover,
-  requiredBaseBranches: array(patternDecoder),
-  blockingBaseBranches: array(patternDecoder),
   requiredLabels: array(patternDecoder),
   blockingLabels: array(patternDecoder),
-  blockingTitleRegex: optional(string()),
-  blockingBodyRegex: optional(string()),
+  requiredLabelsRegex: array(string()),
+  blockingLabelsRegex: array(string()),
   requiredTitleRegex: optional(string()),
+  blockingTitleRegex: optional(string()),
   requiredBodyRegex: optional(string()),
+  blockingBodyRegex: optional(string()),
+  requiredBaseBranches: array(patternDecoder),
+  blockingBaseBranches: array(patternDecoder),
   requiredAuthorRole: commentAuthorAssociation,
   updateBranch: boolean(),
   deleteBranchAfterMerge: boolean(),
