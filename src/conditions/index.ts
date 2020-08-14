@@ -4,6 +4,7 @@ import blockingBody from './blockingBody'
 import blockingBaseBranches from './blockingBaseBranches'
 import blockingChecks from './blockingChecks'
 import blockingLabels from './blockingLabels'
+import blockingLabelsRegex from './blockingLabelsRegex'
 import blockingTitle from './blockingTitle'
 import maximumChangesRequested from './maximumChangesRequested'
 import mergeable from './mergeable'
@@ -14,6 +15,7 @@ import open from './open'
 import requiredBaseBranches from './requiredBaseBranches'
 // import requiredChecks from './requiredChecks'
 import requiredLabels from './requiredLabels'
+import requiredLabelsRegex from './requiredLabelsRegex'
 import requiredBody from './requiredBody'
 import requiredTitle from './requiredTitle'
 
@@ -22,6 +24,7 @@ export const conditions = {
   blockingBaseBranches,
   blockingChecks,
   blockingLabels,
+  blockingLabelsRegex,
   blockingTitle,
   maximumChangesRequested,
   mergeable,
@@ -33,6 +36,7 @@ export const conditions = {
   // requiredChecks,
   requiredBody,
   requiredLabels,
+  requiredLabelsRegex,
   requiredTitle
 }
 
