@@ -92,6 +92,19 @@ export = (app: Application) => {
     console.error(`Error while processing pull request ${pullRequestName}:`, error)
   }
 
+  function onEventError (context: Context, error: any) {
+    Raven.captureException(error, {
+      tags: {
+        owner: context.payload.repository.owner.login,
+        repository: `${context.payload.repository.owner.login}/${context.payload.repository.name}`
+      },
+      extra: {
+        event: context.event
+      }
+    })
+    console.error(`Error handling event ${context.event}:`, error)
+  }
+
   async function handlePullRequests (app: Application, context: Context, installationId: number, repository: RepositoryReference, pullRequestNumbers: number[]) {
     await useWorkerContext({ app, context, installationId }, async (workerContext) => {
       for (const pullRequestNumber of pullRequestNumbers) {
@@ -143,19 +156,21 @@ export = (app: Application) => {
   app.on([
     'status'
   ], async context => {
-    const pullRequests = await getAssociatedPullRequests(context.github, {
-      owner: context.payload.repository.owner.login,
-      repo: context.payload.repository.name,
-      headRefOid: context.payload.sha
-    })
+    ;(async () => {
+      const pullRequests = await getAssociatedPullRequests(context.github, {
+        owner: context.payload.repository.owner.login,
+        repo: context.payload.repository.name,
+        headRefOid: context.payload.sha
+      })
 
-    await Promise.all(pullRequests.map(pullRequest => {
-      const repositoryReference = {
-        owner: pullRequest.owner,
-        repo: pullRequest.repo
-      }
-      return handlePullRequests(app, context, context.payload.installation.id, repositoryReference, [pullRequest.number])
-    }))
+      await Promise.all(pullRequests.map(pullRequest => {
+        const repositoryReference = {
+          owner: pullRequest.owner,
+          repo: pullRequest.repo
+        }
+        return handlePullRequests(app, context, context.payload.installation.id, repositoryReference, [pullRequest.number])
+      }))
+    })().catch(error => onEventError(context, error))
   })
 
   app.on([
@@ -170,10 +185,11 @@ export = (app: Application) => {
     'pull_request_review.edited',
     'pull_request_review.dismissed'
   ], async context => {
-    await handlePullRequests(app, context, context.payload.installation.id, {
+    handlePullRequests(app, context, context.payload.installation.id, {
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name
     }, [context.payload.pull_request.number])
+      .catch(error => onEventError(context, error))
   })
 
   app.on([
@@ -184,38 +200,42 @@ export = (app: Application) => {
       return
     }
 
-    await handlePullRequests(app, context, context.payload.installation.id, {
+    handlePullRequests(app, context, context.payload.installation.id, {
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name
     }, context.payload.check_run.pull_requests.map((pullRequest: any) => pullRequest.number))
+      .catch(error => onEventError(context, error))
   })
 
   app.on([
     'check_run.rerequested',
     'check_run.requested_action'
   ], async context => {
-    await handlePullRequests(app, context, context.payload.installation.id, {
+    handlePullRequests(app, context, context.payload.installation.id, {
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name
     }, context.payload.check_run.pull_requests.map((pullRequest: any) => pullRequest.number))
+      .catch(error => onEventError(context, error))
   })
 
   app.on([
     'check_suite.requested',
     'check_suite.rerequested'
   ], async context => {
-    await handlePullRequests(app, context, context.payload.installation.id, {
+    handlePullRequests(app, context, context.payload.installation.id, {
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name
     }, context.payload.check_suite.pull_requests.map((pullRequest: any) => pullRequest.number))
+      .catch(error => onEventError(context, error))
   })
 
   app.on([
     'check_suite.completed'
   ], async context => {
-    await handlePullRequests(app, context, context.payload.installation.id, {
+    handlePullRequests(app, context, context.payload.installation.id, {
       owner: context.payload.repository.owner.login,
       repo: context.payload.repository.name
     }, context.payload.check_suite.pull_requests.map((pullRequest: any) => pullRequest.number))
+      .catch(error => onEventError(context, error))
   })
 }

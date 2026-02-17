@@ -60,6 +60,8 @@ it('full happy path', async () => {
     })
   )
 
+  await immediate()
+
   expect(github.pulls.merge).toHaveBeenCalled()
 })
 
@@ -98,6 +100,8 @@ it('not enough approval reviews', async () => {
     })
   )
 
+  await immediate()
+
   await app.receive(
     createCheckRunCreatedEvent({
       owner: 'bobvanderlinden',
@@ -105,6 +109,8 @@ it('not enough approval reviews', async () => {
       number: 1
     })
   )
+
+  await immediate()
 
   expect(github.pulls.merge).not.toHaveBeenCalled()
 
@@ -121,6 +127,8 @@ it('not enough approval reviews', async () => {
       number: 1
     })
   )
+
+  await immediate()
 
   expect(github.pulls.merge).toHaveBeenCalled()
 })
@@ -145,13 +153,15 @@ it('no configuration should not schedule any pull request', async () => {
     github
   })
 
-  app.receive(
+  await app.receive(
     createPullRequestOpenedEvent({
       owner: 'bobvanderlinden',
       repo: 'probot-auto-merge',
       number: 1
     })
   )
+
+  await immediate()
 
   expect(schedulePullRequestTrigger).toBeCalledTimes(0)
 })
@@ -349,6 +359,8 @@ it('to merge when one rule and the global configuration passes', async () => {
     })
   )
 
+  await immediate()
+
   expect(github.pulls.merge).toHaveBeenCalled()
 })
 
@@ -393,6 +405,8 @@ it('to merge when the role of the pull request author is satisfied, and fail oth
     })
   )
 
+  await immediate()
+
   // Only 1 review and PR is not from OWNER
   expect(github.pulls.merge).not.toHaveBeenCalled()
 
@@ -405,6 +419,8 @@ it('to merge when the role of the pull request author is satisfied, and fail oth
       number: 2
     })
   )
+
+  await immediate()
 
   // Only 1 review but PR is from OWNER
   expect(github.pulls.merge).toHaveBeenCalled()
@@ -441,6 +457,8 @@ it('to report error when processing pull request results in error', async () => 
       number: 1
     })
   )
+
+  await immediate()
 
   expect(captureException).toHaveBeenCalled()
   expect(consoleError).toHaveBeenCalled()
@@ -506,6 +524,8 @@ it('to report error and continue when graphql query contained errors', async () 
     })
   )
 
+  await immediate()
+
   expect(captureException).toHaveBeenCalledTimes(1)
   expect(github.pulls.merge).toHaveBeenCalled()
 })
@@ -543,6 +563,8 @@ it('when no permission to source repository throw a no permission error', async 
       number: 1
     })
   )
+
+  await immediate()
 
   expect(captureException).toHaveBeenCalled()
   expect(captureException.mock.calls[0][0].message).toContain('No permission')
