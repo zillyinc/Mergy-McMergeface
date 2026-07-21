@@ -97,5 +97,11 @@
     "collectCoverageFrom": [
       "src/**/*.{js,ts}"
     ]
+  },
+  "overrides": {
+    "handlebars": "^4.7.9",
+    "request": {
+      "form-data": "^2.5.4"
+    }
   }
 }
