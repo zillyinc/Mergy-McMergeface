@@ -34,14 +34,22 @@ function getStatusContexts (pullRequestInfo: PullRequestInfo): CommitStatusConte
   )
 }
 
+function getRequiredContexts (pullRequestInfo: PullRequestInfo): string[] {
+  const applicableRule = getApplicableBranchProtectionRule(pullRequestInfo)
+  const branchProtectionContexts = applicableRule
+    ? applicableRule.requiredStatusCheckContexts
+    : []
+  const allContexts = branchProtectionContexts.concat(pullRequestInfo.rulesetRequiredStatusCheckContexts)
+  return allContexts
+    .filter((context, index) => allContexts.indexOf(context) === index)
+    .filter(context => context !== statusReportCheckName)
+}
+
 export default function doesNotHaveBlockingChecks (
   config: ConditionConfig,
   pullRequestInfo: PullRequestInfo
 ): ConditionResult {
-  const applicableRule = getApplicableBranchProtectionRule(pullRequestInfo)
-  const requiredContexts = applicableRule
-    ? applicableRule.requiredStatusCheckContexts.filter(context => context !== statusReportCheckName)
-    : []
+  const requiredContexts = getRequiredContexts(pullRequestInfo)
 
   if (requiredContexts.length === 0) {
     return {

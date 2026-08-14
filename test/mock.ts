@@ -92,6 +92,7 @@ export const defaultPullRequestInfo = {
       nodes: []
     }
   },
+  rulesetRequiredStatusCheckContexts: [] as string[],
   title: 'Add some feature',
   body: 'This is a description of this PR.\n\nCloses #1'
 }
@@ -452,6 +453,7 @@ function createPartialGithubApiFromPullRequestInfo (opts: {
     graphql: jest.fn(() => {
       return pullRequestQueryResult
     }),
+    paginate: jest.fn(() => Promise.resolve([])) as any,
     checks: {
       create: createOkResponse(),
       update: createOkResponse()

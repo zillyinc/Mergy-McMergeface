@@ -512,6 +512,7 @@ it('to report error and continue when graphql query contained errors', async () 
     pulls: {
       merge: createOkResponse()
     },
+    paginate: jest.fn(async () => []) as any,
     graphql: jest.fn(async () => {
       throw new GraphqlError({
         errors: [{

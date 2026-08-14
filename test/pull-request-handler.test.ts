@@ -169,7 +169,7 @@ describe('getPullRequestPlan', () => {
     expect(plan).toEqual({
       code: 'blocked',
       actions: [],
-      message: 'Merging the pull request is blocked by branch protection rules. Please make sure probot-auto-merge has permission to push to `main` under the "Restrict who can push to matching branches" section the branch protection rules.'
+      message: 'GitHub reports the pull request as blocked. This usually means required status checks have not passed yet, required reviews are missing, or the app is not allowed to merge into `main`. The merge will be retried when the pull request state changes.'
     })
   })
 

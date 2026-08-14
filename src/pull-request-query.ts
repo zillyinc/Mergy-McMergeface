@@ -1,11 +1,12 @@
 import Raven from 'raven'
-import { PullRequestReference, PullRequestInfo, validatePullRequestQuery } from './github-models'
+import { PullRequestReference, PullRequestInfo, PullRequestQueryPullRequest, validatePullRequestQuery } from './github-models'
 import { PullRequestQueryVariables, PullRequestQuery } from './query.graphql'
 import { Context } from 'probot'
 import { GitHubAPI } from 'probot/lib/github'
 import { readFileSync } from 'fs'
 import { join } from 'path'
 import { rawGraphQLQuery } from './github-utils'
+import { flatMap } from './utils'
 const query = readFileSync(join(__dirname, '..', 'query.graphql'), 'utf8')
 
 const isNumber = (v: string | number) => typeof v === 'number'
@@ -54,6 +55,33 @@ export async function graphQLQuery (github: GitHubAPI, variables: PullRequestQue
   return response.data as PullRequestQuery
 }
 
+type BranchRule = {
+  type: string,
+  parameters?: {
+    required_status_checks?: Array<{ context: string }>
+  }
+}
+
+async function queryRulesetRequiredStatusCheckContexts (github: Context['github'], owner: string, repo: string, branch: string): Promise<string[]> {
+  try {
+    const rules: BranchRule[] = await github.paginate('GET /repos/:owner/:repo/rules/branches/:branch', {
+      owner,
+      repo,
+      branch: encodeURIComponent(branch),
+      per_page: 100
+    })
+    return flatMap(
+      rules.filter(rule => rule.type === 'required_status_checks'),
+      rule => ((rule.parameters && rule.parameters.required_status_checks) || []).map(check => check.context)
+    )
+  } catch (error) {
+    // When this call fails the ruleset-required contexts are unknown, so their
+    // enforcement falls back to GitHub's own mergeStateStatus gate.
+    console.warn(`Failed to fetch branch rules for ${owner}/${repo}@${branch}: ${error}`)
+    return []
+  }
+}
+
 export async function queryPullRequest (github: Context['github'], { owner, repo, number: pullRequestNumber }: PullRequestReference): Promise<PullRequestInfo> {
   const response = await graphQLQuery(github, {
     owner: owner,
@@ -61,10 +89,17 @@ export async function queryPullRequest (github: Context['github'], { owner, repo
     pullRequestNumber: pullRequestNumber
   })
 
-  return Raven.context({
+  const pullRequest: PullRequestQueryPullRequest = Raven.context({
     extras: { response }
   }, () => {
     const checkedResponse = validatePullRequestQuery(response)
     return checkedResponse.repository.pullRequest
   })
+
+  const rulesetRequiredStatusCheckContexts = await queryRulesetRequiredStatusCheckContexts(github, owner, repo, pullRequest.baseRef.name)
+
+  return {
+    ...pullRequest,
+    rulesetRequiredStatusCheckContexts
+  }
 }

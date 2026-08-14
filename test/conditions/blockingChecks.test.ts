@@ -420,6 +420,188 @@ describe('blockingChecks', () => {
     expect(result).toEqual({ status: 'success' })
   })
 
+  it('returns pending when a ruleset-required check has no matching check run', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'some-other-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }]),
+        baseRef: createMasterRef(),
+        rulesetRequiredStatusCheckContexts: ['required-check']
+      })
+    )
+    expect(result.status).toBe('pending')
+  })
+
+  it('returns pending when a ruleset-required check is in progress', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'required-check',
+          status: CheckStatusState.IN_PROGRESS,
+          conclusion: null
+        }]),
+        baseRef: createMasterRef(),
+        rulesetRequiredStatusCheckContexts: ['required-check']
+      })
+    )
+    expect(result.status).toBe('pending')
+  })
+
+  it('returns fail when a ruleset-required check failed', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.FAILURE
+        }]),
+        baseRef: createMasterRef(),
+        rulesetRequiredStatusCheckContexts: ['required-check']
+      })
+    )
+    expect(result.status).toBe('fail')
+  })
+
+  it('returns success when all ruleset-required checks succeeded', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }]),
+        baseRef: createMasterRef(),
+        rulesetRequiredStatusCheckContexts: ['required-check']
+      })
+    )
+    expect(result).toEqual({ status: 'success' })
+  })
+
+  it('returns pending when branch protection checks succeeded but a ruleset-required check is missing', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'classic-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['classic-check']
+        }]),
+        rulesetRequiredStatusCheckContexts: ['ruleset-check']
+      })
+    )
+    expect(result.status).toBe('pending')
+  })
+
+  it('returns fail when branch protection checks succeeded but a ruleset-required check failed', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'classic-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }, {
+          name: 'ruleset-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.FAILURE
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['classic-check']
+        }]),
+        rulesetRequiredStatusCheckContexts: ['ruleset-check']
+      })
+    )
+    expect(result.status).toBe('fail')
+  })
+
+  it('returns fail when ruleset-required checks succeeded but a branch protection check failed', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'classic-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.FAILURE
+        }, {
+          name: 'ruleset-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['classic-check']
+        }]),
+        rulesetRequiredStatusCheckContexts: ['ruleset-check']
+      })
+    )
+    expect(result.status).toBe('fail')
+  })
+
+  it('returns success when both branch protection and ruleset-required checks succeeded', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([{
+          name: 'classic-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }, {
+          name: 'ruleset-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['classic-check']
+        }]),
+        rulesetRequiredStatusCheckContexts: ['ruleset-check']
+      })
+    )
+    expect(result).toEqual({ status: 'success' })
+  })
+
+  it('returns success when there are no branch protection rules and no ruleset contexts even with a failing check', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckSuiteWithCheckRun({
+          checkRun: failedCheckRun
+        }),
+        baseRef: createMasterRef(),
+        rulesetRequiredStatusCheckContexts: []
+      })
+    )
+    expect(result).toEqual({ status: 'success' })
+  })
+
+  it('ignores the own status report check when it is a ruleset-required context', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRuns([]),
+        baseRef: createMasterRef(),
+        rulesetRequiredStatusCheckContexts: ['auto-merge']
+      })
+    )
+    expect(result).toEqual({ status: 'success' })
+  })
+
   it('evaluates other required contexts when the own status report check is also required', () => {
     const result = blockingChecks(
       createConditionConfig(),
