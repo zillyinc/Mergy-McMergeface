@@ -42,14 +42,20 @@ query PullRequestQuery($owner:String!, $repo:String!, $pullRequestNumber:Int!) {
       commits(last: 1) {
         nodes {
           commit {
-            checkSuites(last: 10) {
+            status {
+              contexts {
+                context
+                state
+              }
+            }
+            checkSuites(last: 100) {
               nodes {
                 app {
                   databaseId
                 }
                 status
                 conclusion
-                checkRuns(last: 10) {
+                checkRuns(last: 100) {
                   nodes {
                     databaseId
                     name

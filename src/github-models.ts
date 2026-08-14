@@ -1,6 +1,6 @@
 import { PullRequestQuery } from './query.graphql'
 import { ElementOf, Omit } from './type-utils'
-export { PullRequestState, MergeableState, CommentAuthorAssociation, PullRequestReviewState, CheckStatusState, CheckConclusionState } from './query.graphql'
+export { PullRequestState, MergeableState, CommentAuthorAssociation, PullRequestReviewState, CheckStatusState, CheckConclusionState, StatusState } from './query.graphql'
 
 export interface RepositoryReference {
   owner: string
@@ -104,6 +104,10 @@ export function validatePullRequestQuery (pullRequestQuery: PullRequestQuery) {
                   ...removeTypename(commit),
                   commit: {
                     ...removeTypename(commit.commit),
+                    status: maybeNull(commit.commit.status, status => ({
+                      ...removeTypename(status),
+                      contexts: status.contexts.map(context => removeTypename(context))
+                    })),
                     checkSuites: assertNotNullNodes(commit.commit.checkSuites, 'No permission to fetch checkSuites',
                       checkSuite => ({
                         ...removeTypename(checkSuite),
@@ -154,4 +158,6 @@ export type Review = ElementOf<PullRequestInfo['reviews']['nodes']>
 export type Commit = ElementOf<PullRequestInfo['commits']['nodes']>['commit']
 export type CheckSuite = ElementOf<Commit['checkSuites']['nodes']>
 export type CheckRun = ElementOf<CheckSuite['checkRuns']['nodes']>
+export type CommitStatusContext = ElementOf<Exclude<Commit['status'], null>['contexts']>
+export type BranchProtectionRule = ElementOf<PullRequestInfo['repository']['branchProtectionRules']['nodes']>
 export type Ref = Exclude<PullRequestInfo['headRef'], null>
