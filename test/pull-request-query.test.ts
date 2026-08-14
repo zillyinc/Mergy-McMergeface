@@ -1,6 +1,10 @@
 import { queryPullRequest } from '../src/pull-request-query'
 import { createGithubApi, createPullRequestInfo, createPullRequestQuery, createOkEndpoint, GraphqlError } from './mock'
 
+function createPaginate (rules: any[]) {
+  return jest.fn(() => Promise.resolve(rules)) as any
+}
+
 describe('queryPullRequest', () => {
   it('should do a single graphql query', async () => {
     const pullRequestInfo = createPullRequestInfo()
@@ -19,6 +23,7 @@ describe('queryPullRequest', () => {
     await queryPullRequest(
       createGithubApi({
         graphql,
+        paginate: createPaginate([]),
         checks: {
           listForRef
         }
@@ -26,6 +31,59 @@ describe('queryPullRequest', () => {
       { owner: 'bobvanderlinden', repo: 'probot-auto-merge', number: 1 }
     )
     expect(graphql).toHaveBeenCalledTimes(1)
+  })
+
+  it('should populate ruleset required status check contexts from the branch rules endpoint', async () => {
+    const pullRequestInfo = createPullRequestInfo()
+    const graphql = jest.fn(() => createPullRequestQuery(pullRequestInfo))
+    const paginate = createPaginate([{
+      type: 'required_status_checks',
+      parameters: {
+        required_status_checks: [{ context: 'build' }, { context: 'test' }]
+      }
+    }, {
+      type: 'pull_request',
+      parameters: {}
+    }, {
+      type: 'required_status_checks',
+      parameters: {
+        required_status_checks: [{ context: 'lint' }]
+      }
+    }])
+    const result = await queryPullRequest(
+      createGithubApi({
+        graphql,
+        paginate
+      }),
+      { owner: 'bobvanderlinden', repo: 'probot-auto-merge', number: 1 }
+    )
+    expect(paginate).toHaveBeenCalledWith('GET /repos/:owner/:repo/rules/branches/:branch', {
+      owner: 'bobvanderlinden',
+      repo: 'probot-auto-merge',
+      branch: 'master',
+      per_page: 100
+    })
+    expect(result.rulesetRequiredStatusCheckContexts).toEqual(['build', 'test', 'lint'])
+  })
+
+  it('should yield no ruleset required status check contexts when the branch rules request fails', async () => {
+    const warn = jest.spyOn(console, 'warn').mockImplementation(() => undefined)
+    try {
+      const pullRequestInfo = createPullRequestInfo()
+      const graphql = jest.fn(() => createPullRequestQuery(pullRequestInfo))
+      const paginate = jest.fn(() => Promise.reject(new Error('Resource not accessible by integration'))) as any
+      const result = await queryPullRequest(
+        createGithubApi({
+          graphql,
+          paginate
+        }),
+        { owner: 'bobvanderlinden', repo: 'probot-auto-merge', number: 1 }
+      )
+      expect(result.rulesetRequiredStatusCheckContexts).toEqual([])
+      expect(warn).toHaveBeenCalled()
+    } finally {
+      warn.mockRestore()
+    }
   })
 
   it('should throw error when no query response', async () => {
@@ -83,7 +141,8 @@ describe('queryPullRequest', () => {
     })
     await queryPullRequest(
       createGithubApi({
-        graphql
+        graphql,
+        paginate: createPaginate([])
       }),
       { owner: 'bobvanderlinden', repo: 'probot-auto-merge', number: 1 }
     )
@@ -119,7 +178,8 @@ describe('queryPullRequest', () => {
     })
     await queryPullRequest(
       createGithubApi({
-        graphql
+        graphql,
+        paginate: createPaginate([])
       }),
       { owner: 'bobvanderlinden', repo: 'probot-auto-merge', number: 1 }
     )

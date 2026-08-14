@@ -153,7 +153,10 @@ export function validatePullRequestQuery (pullRequestQuery: PullRequestQuery) {
 }
 
 export type PullRequestQueryResultValidated = ReturnType<typeof validatePullRequestQuery>
-export type PullRequestInfo = PullRequestQueryResultValidated['repository']['pullRequest']
+export type PullRequestQueryPullRequest = PullRequestQueryResultValidated['repository']['pullRequest']
+export type PullRequestInfo = PullRequestQueryPullRequest & {
+  rulesetRequiredStatusCheckContexts: string[]
+}
 export type Review = ElementOf<PullRequestInfo['reviews']['nodes']>
 export type Commit = ElementOf<PullRequestInfo['commits']['nodes']>['commit']
 export type CheckSuite = ElementOf<Commit['checkSuites']['nodes']>
