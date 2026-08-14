@@ -217,7 +217,7 @@ export function getPullRequestPlan (
       // See: https://docs.github.com/en/graphql/reference/enums#mergestatestatus
       return {
         code: 'blocked',
-        message: `GitHub reports the pull request as blocked. This usually means required status checks have not passed yet, required reviews are missing, or the app is not allowed to merge into \`${pullRequestInfo.baseRef.name}\`. The merge will be retried when the pull request state changes.`,
+        message: `GitHub reports pull request #${pullRequestInfo.number} as blocked. This usually means required status checks have not passed yet, required reviews are missing, or the app is not allowed to merge into \`${pullRequestInfo.baseRef.name}\`. The merge will be retried when the pull request state changes.`,
         actions: []
       }
     case MergeStateStatus.DIRTY:

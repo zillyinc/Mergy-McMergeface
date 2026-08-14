@@ -169,7 +169,7 @@ describe('getPullRequestPlan', () => {
     expect(plan).toEqual({
       code: 'blocked',
       actions: [],
-      message: 'GitHub reports the pull request as blocked. This usually means required status checks have not passed yet, required reviews are missing, or the app is not allowed to merge into `main`. The merge will be retried when the pull request state changes.'
+      message: 'GitHub reports pull request #1 as blocked. This usually means required status checks have not passed yet, required reviews are missing, or the app is not allowed to merge into `main`. The merge will be retried when the pull request state changes.'
     })
   })
 
