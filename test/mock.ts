@@ -67,6 +67,7 @@ export const defaultPullRequestInfo = {
   commits: {
     nodes: [{
       commit: {
+        status: null,
         checkSuites: {
           nodes: []
         }
@@ -303,6 +304,7 @@ export function createStatusEvent (options: RepositoryReference & { sha: string,
 export function createCommit (options?: Partial<Commit>): { commit: Commit } {
   return {
     commit: {
+      status: null,
       checkSuites: {
         nodes: []
       },

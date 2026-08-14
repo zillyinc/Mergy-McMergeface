@@ -17,6 +17,8 @@ function getOctokitConclusion (value: ReportCheckConclusion | undefined) {
 
 export type ReportCheckConclusion = CheckConclusionState.NEUTRAL | CheckConclusionState.SUCCESS
 
+export const statusReportCheckName = 'auto-merge'
+
 type CheckOptions = Omit<ChecksCreateParams, 'head_sha'>
 
 export async function updateStatusReportCheck (
@@ -32,7 +34,7 @@ export async function updateStatusReportCheck (
   const checkOptions: CheckOptions = {
     conclusion: getOctokitConclusion(conclusion),
     status: 'completed',
-    name: 'auto-merge',
+    name: statusReportCheckName,
     started_at: context.startedAt.toISOString(),
     completed_at: new Date().toISOString(),
     output: {

@@ -268,7 +268,19 @@ it('pending check run', async () => {
     },
     commits: createCommitsWithCheckSuiteWithCheckRun({
       checkRun: queuedCheckRun
-    })
+    }),
+    repository: {
+      branchProtectionRules: {
+        nodes: [{
+          pattern: 'master',
+          restrictsPushes: true,
+          requiresStrictStatusChecks: true,
+          requiredStatusCheckContexts: [
+            queuedCheckRun.name
+          ]
+        }]
+      }
+    }
   })
 
   const github = createGithubApiFromPullRequestInfo({
