@@ -1,21 +1,21 @@
-# probot-auto-merge
+# Mergy-McMergeface
 
-[![Travis CI](https://travis-ci.org/bobvanderlinden/probot-auto-merge.svg?branch=master)](https://travis-ci.org/bobvanderlinden/probot-auto-merge)
-[![Coverage](https://img.shields.io/coveralls/github/bobvanderlinden/probot-auto-merge.svg)](https://coveralls.io/github/bobvanderlinden/probot-auto-merge)
+[![Node CI](https://github.com/zillyinc/Mergy-McMergeface/actions/workflows/nodejs.yml/badge.svg)](https://github.com/zillyinc/Mergy-McMergeface/actions/workflows/nodejs.yml)
+[![License](https://img.shields.io/badge/license-ISC-blue.svg)](LICENSE)
 
-A GitHub App built with [Probot](https://github.com/probot/probot) that automatically merges PRs
+A GitHub App built with [Probot](https://github.com/probot/probot) that automatically merges PRs. A fork of [probot-auto-merge](https://github.com/bobvanderlinden/probot-auto-merge).
 
-> ![Probot Auto Merge in action](https://user-images.githubusercontent.com/6375609/45245043-d9c5ff00-b2fa-11e8-8745-2588323edda8.png)
+> ![Mergy-McMergeface in action](https://user-images.githubusercontent.com/6375609/45245043-d9c5ff00-b2fa-11e8-8745-2588323edda8.png)
 
 ## Usage
 
-1. [Configure the GitHub App](https://github.com/apps/probot-auto-merge)
+1. Deploy the app and install it on your repositories. See [Deployment](#deployment).
 2. Create `.github/auto-merge.yml` in your repository.
 3. Customize configuration to your needs. See below.
 
 ## Configuration
 
-Configuration of `probot-auto-merge` is done through `.github/auto-merge.yml` in
+Configuration of Mergy-McMergeface is done through `.github/auto-merge.yml` in
 your repository. An example of this file can be found [here](auto-merge.example.yml).
 You can also see the configuration for this repository [here](.github/auto-merge.yml).
 
@@ -27,7 +27,7 @@ All conditions must be met before a PR will be automatically merged. You can get
 flexibility by defining multiple rules. Rules can have multiple conditions and if any
 of the conditions inside a rule are met, the PR is also merged. See [rules](#rules-default-none).
 
-If the target branch is a protected branch, you must add `probot-auto-merge` bot to
+If the target branch is a protected branch, you must add the app to
 the list of `People, teams or apps with push access` in your branch protection rules.
 
 Note that the default configuration options are to do nothing. This is to prevent
@@ -164,12 +164,12 @@ blockingLabels:
 
 Note: remove the whole section when you're not using blocking labels.
 
-### **Deprecated** `requiredLabelsRegex` (condition, default: none)
+### **Deprecated** `blockingLabelsRegex` (condition, default: none)
 
 Similar to `blockingLabels`, except these will be matched as case insensitive regular expressions, instead of looking for exact matches like the `blockingLabels` option.
 
 In the example below, pull requests that have a label that matches the regex `(.*)block(.*)`
-will not be merged automatically. merged.
+will not be merged automatically.
 
 ```yaml
 blockingLabelsRegex:
@@ -211,7 +211,7 @@ In the example below, pull requests need to have a label that matches the regex 
 before they will be automatically merged.
 
 ```yaml
-requiredLabels:
+requiredLabelsRegex:
 - (.*)approved(.*)
 ```
 
@@ -239,7 +239,7 @@ matching the configured expression will automatically be merged.
 This is useful for forks, that can only create pull request text, no labels.
 
 In the example below, pull requests with the title containing `MERGE` will be
-automatically merged. This also includes This also includes `[merge]`, `MERGE` or `[MERGE]`, but not `submerge`:
+automatically merged. This also includes `[merge]`, `MERGE` or `[MERGE]`, but not `submerge`:
 
 ```yaml
 requiredTitleRegex: '\bMERGE\b'
@@ -437,7 +437,7 @@ npm run build && npm run dev
 
 ### Running on Docker
 
-This will build and run the app on a container called `probot-auto-merge`:
+This will build and run the app in a local Docker container:
 
 ```sh
 npm run docker
@@ -465,7 +465,7 @@ npm run lint
 
 ## Deployment
 
-To deploy `probot-auto-merge` yourself, please follow [the guidelines defined by Probot on deploying GitHub applications](https://probot.github.io/docs/deployment/).
+To deploy Mergy-McMergeface yourself, please follow [the guidelines defined by Probot on deploying GitHub applications](https://probot.github.io/docs/deployment/). This repository also includes a [Procfile](Procfile) for Heroku-style deployments.
 
 The permissions and events needed for the app to function can be found below.
 
@@ -492,7 +492,7 @@ The permissions and events needed for the app to function can be found below.
 
 ## Contributing
 
-If you have suggestions for how `probot-auto-merge` could be improved, or want to report a bug, open an issue! We'd love all and any contributions.
+If you have suggestions for how Mergy-McMergeface could be improved, or want to report a bug, open an issue! We'd love all and any contributions.
 
 For more, check out the [Contributing Guide](CONTRIBUTING.md).
 
