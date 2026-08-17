@@ -5,7 +5,7 @@ import { result } from './utils'
 import { getPullRequestStatus, PullRequestStatus } from './pull-request-status'
 import { queryPullRequest } from './pull-request-query'
 import { updateStatusReportCheck } from './status-report'
-import { MergeStateStatus, PullRequestState, CheckConclusionState } from './query.graphql'
+import { MergeStateStatus, MergeableState, PullRequestState, CheckConclusionState } from './query.graphql'
 import { Config } from './config'
 import { getCommitMessage, splitCommitMessage } from './commit-message'
 
@@ -150,6 +150,17 @@ export function getPullRequestPlan (
     return {
       code: 'closed',
       message: 'Pull request was closed',
+      actions: []
+    }
+  }
+
+  // A conflicting pull request must be checked before pending conditions:
+  // GitHub cannot create the test-merge commit for it, so required checks
+  // never report and the pull request would otherwise reschedule forever.
+  if (pullRequestInfo.mergeable === MergeableState.CONFLICTING) {
+    return {
+      code: 'dirty',
+      message: `Pull request #${pullRequestInfo.number} has a merge conflict with \`${pullRequestInfo.baseRef.name}\`, so required checks cannot run. Skipping it until its branch is updated.`,
       actions: []
     }
   }
