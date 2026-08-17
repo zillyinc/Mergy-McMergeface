@@ -20,6 +20,9 @@ import requiredBody from './requiredBody'
 import requiredTitle from './requiredTitle'
 
 export const conditions = {
+  // mergeable is listed first: a merge conflict is the cheapest condition to
+  // detect and makes every check-based condition unable to ever complete.
+  mergeable,
   blockingBody,
   blockingBaseBranches,
   blockingChecks,
@@ -27,7 +30,6 @@ export const conditions = {
   blockingLabelsRegex,
   blockingTitle,
   maximumChangesRequested,
-  mergeable,
   minimumApprovals,
   requiredAuthorRole,
   requiredReviewers,

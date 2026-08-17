@@ -6,7 +6,7 @@ import { PullRequestInfo } from './../src/models'
 import { getPullRequestPlan, executeAction } from '../src/pull-request-handler'
 import { createHandlerContext, createPullRequestInfo, createConfig, defaultPullRequestInfo, createGithubApi, createPullRequestContext, createOkResponse, createRef } from './mock'
 import { mapObject } from '../src/utils'
-import { MergeStateStatus, PullRequestState } from '../src/query.graphql'
+import { MergeStateStatus, MergeableState, PullRequestState } from '../src/query.graphql'
 
 const defaultBaseRef: PullRequestInfo['baseRef'] = {
   repository: {
@@ -122,6 +122,27 @@ describe('getPullRequestPlan', () => {
       })
     )
     expect(plan.actions).toEqual(['reschedule'])
+  })
+
+  it('skips a conflicting pull request instead of waiting on pending checks', async () => {
+    const plan = getPullRequestPlan(
+      createHandlerContext(),
+      createPullRequestInfo({
+        mergeable: MergeableState.CONFLICTING,
+        mergeStateStatus: MergeStateStatus.DIRTY
+      }),
+      createPullRequestStatus({
+        blockingChecks: {
+          status: 'pending'
+        },
+        mergeable: {
+          status: 'fail',
+          message: 'Pull request has conflicts'
+        }
+      })
+    )
+    expect(plan.code).toBe('dirty')
+    expect(plan.actions).toEqual([])
   })
 
   it('update branch when pull request is out-of-date and update-branch is enabled', async () => {
