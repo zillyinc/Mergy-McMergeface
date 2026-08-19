@@ -124,6 +124,24 @@ describe('getPullRequestPlan', () => {
     expect(plan.actions).toEqual(['reschedule'])
   })
 
+  it('skips a pull request with failing conditions instead of waiting on pending checks', async () => {
+    const plan = getPullRequestPlan(
+      createHandlerContext(),
+      createPullRequestInfo(),
+      createPullRequestStatus({
+        blockingChecks: {
+          status: 'pending'
+        },
+        requiredLabels: {
+          status: 'fail',
+          message: 'Required labels are missing (approved)'
+        }
+      })
+    )
+    expect(plan.code).toBe('failing_condition')
+    expect(plan.actions).toEqual([])
+  })
+
   it('skips a conflicting pull request instead of waiting on pending checks', async () => {
     const plan = getPullRequestPlan(
       createHandlerContext(),
