@@ -8,6 +8,7 @@ import { RepositoryReference, PullRequestReference } from './github-models'
 import myAppId from './myappid'
 import { GitHubAPI } from 'probot/lib/github'
 import { rawGraphQLQuery } from './github-utils'
+import { scanInstallations } from './startup-scan'
 
 async function getWorkerContext (options: {app: Application, context: Context, installationId: number}): Promise<WorkerContext> {
   const { app, context, installationId } = options
@@ -238,4 +239,17 @@ export = (app: Application) => {
     }, context.payload.check_suite.pull_requests.map((pullRequest: any) => pullRequest.number))
       .catch(error => onEventError(context, error))
   })
+
+  // The queues live in memory, so a deploy or restart forgets every queued
+  // pull request until its next webhook arrives. Rebuild them by scanning all
+  // open pull requests once at boot. Skipped in tests, where app.auth is a
+  // stub and every scenario drives the queue through synthetic events.
+  if (process.env.NODE_ENV !== 'test' && process.env.DISABLE_STARTUP_SCAN !== 'true') {
+    scanInstallations(app, (context, installationId, repository, pullRequestNumbers) =>
+      handlePullRequests(app, context, installationId, repository, pullRequestNumbers)
+    ).catch(error => {
+      Raven.captureException(error)
+      app.log.error('Startup scan failed:', error)
+    })
+  }
 }
