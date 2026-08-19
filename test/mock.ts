@@ -93,6 +93,7 @@ export const defaultPullRequestInfo = {
     }
   },
   rulesetRequiredStatusCheckContexts: [] as string[],
+  rulesetRequiresStrictStatusChecks: false,
   title: 'Add some feature',
   body: 'This is a description of this PR.\n\nCloses #1'
 }

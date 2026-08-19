@@ -156,6 +156,7 @@ export type PullRequestQueryResultValidated = ReturnType<typeof validatePullRequ
 export type PullRequestQueryPullRequest = PullRequestQueryResultValidated['repository']['pullRequest']
 export type PullRequestInfo = PullRequestQueryPullRequest & {
   rulesetRequiredStatusCheckContexts: string[]
+  rulesetRequiresStrictStatusChecks: boolean
 }
 export type Review = ElementOf<PullRequestInfo['reviews']['nodes']>
 export type Commit = ElementOf<PullRequestInfo['commits']['nodes']>['commit']

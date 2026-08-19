@@ -1,5 +1,6 @@
 import Raven from 'raven'
 import { conditions } from './conditions/index'
+import { getApplicableBranchProtectionRule } from './conditions/blockingChecks'
 import { HandlerContext, PullRequestReference, PullRequestInfo } from './models'
 import { result } from './utils'
 import { getPullRequestStatus, PullRequestStatus } from './pull-request-status'
@@ -9,9 +10,27 @@ import { MergeStateStatus, MergeableState, PullRequestState, CheckConclusionStat
 import { Config } from './config'
 import { getCommitMessage, splitCommitMessage } from './commit-message'
 
+export type QueuePosition = 'front' | 'back'
+
 export interface PullRequestContext extends HandlerContext {
-  reschedulePullRequest: () => void,
+  reschedulePullRequest: (delay?: number, position?: QueuePosition) => void,
   startedAt: Date
+}
+
+/**
+ * Whether the pull request's base branch requires branches to be up to date
+ * before merging (classic branch protection or a ruleset). When it does, the
+ * repository merges serially: every merge invalidates the checks of every
+ * other pull request, so the queue head must camp until its own checks report
+ * before any other pull request is touched - otherwise each merge would
+ * restart a branch-update-and-CI cycle for all of them. Without the
+ * requirement no such cycle exists and waiting pull requests can yield their
+ * turn.
+ */
+export function requiresStrictUpToDate (pullRequestInfo: PullRequestInfo): boolean {
+  const applicableRule = getApplicableBranchProtectionRule(pullRequestInfo)
+  return Boolean(applicableRule && applicableRule.requiresStrictStatusChecks) ||
+    pullRequestInfo.rulesetRequiresStrictStatusChecks
 }
 
 export async function handlePullRequest (
@@ -348,7 +367,7 @@ export async function executeAction (
     case 'update_branch':
       return updateBranch(context, pullRequestInfo)
     case 'reschedule':
-      return context.reschedulePullRequest()
+      return context.reschedulePullRequest(undefined, requiresStrictUpToDate(pullRequestInfo) ? 'front' : 'back')
     case 'merge':
       return mergePullRequest(context, pullRequestInfo)
     case 'delete_branch':

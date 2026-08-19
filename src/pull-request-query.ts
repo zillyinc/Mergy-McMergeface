@@ -58,11 +58,17 @@ export async function graphQLQuery (github: GitHubAPI, variables: PullRequestQue
 type BranchRule = {
   type: string,
   parameters?: {
-    required_status_checks?: Array<{ context: string }>
+    required_status_checks?: Array<{ context: string }>,
+    strict_required_status_checks_policy?: boolean
   }
 }
 
-async function queryRulesetRequiredStatusCheckContexts (github: Context['github'], owner: string, repo: string, branch: string): Promise<string[]> {
+type RulesetStatusCheckRequirements = {
+  contexts: string[],
+  requiresStrictStatusChecks: boolean
+}
+
+async function queryRulesetStatusCheckRequirements (github: Context['github'], owner: string, repo: string, branch: string): Promise<RulesetStatusCheckRequirements> {
   try {
     const rules: BranchRule[] = await github.paginate('GET /repos/:owner/:repo/rules/branches/:branch', {
       owner,
@@ -70,15 +76,23 @@ async function queryRulesetRequiredStatusCheckContexts (github: Context['github'
       branch: encodeURIComponent(branch),
       per_page: 100
     })
-    return flatMap(
-      rules.filter(rule => rule.type === 'required_status_checks'),
-      rule => ((rule.parameters && rule.parameters.required_status_checks) || []).map(check => check.context)
-    )
+    const statusCheckRules = rules.filter(rule => rule.type === 'required_status_checks')
+    return {
+      contexts: flatMap(
+        statusCheckRules,
+        rule => ((rule.parameters && rule.parameters.required_status_checks) || []).map(check => check.context)
+      ),
+      requiresStrictStatusChecks: statusCheckRules
+        .some(rule => Boolean(rule.parameters && rule.parameters.strict_required_status_checks_policy))
+    }
   } catch (error) {
     // When this call fails the ruleset-required contexts are unknown, so their
     // enforcement falls back to GitHub's own mergeStateStatus gate.
     console.warn(`Failed to fetch branch rules for ${owner}/${repo}@${branch}: ${error}`)
-    return []
+    return {
+      contexts: [],
+      requiresStrictStatusChecks: false
+    }
   }
 }
 
@@ -96,10 +110,11 @@ export async function queryPullRequest (github: Context['github'], { owner, repo
     return checkedResponse.repository.pullRequest
   })
 
-  const rulesetRequiredStatusCheckContexts = await queryRulesetRequiredStatusCheckContexts(github, owner, repo, pullRequest.baseRef.name)
+  const rulesetRequirements = await queryRulesetStatusCheckRequirements(github, owner, repo, pullRequest.baseRef.name)
 
   return {
     ...pullRequest,
-    rulesetRequiredStatusCheckContexts
+    rulesetRequiredStatusCheckContexts: rulesetRequirements.contexts,
+    rulesetRequiresStrictStatusChecks: rulesetRequirements.requiresStrictStatusChecks
   }
 }
