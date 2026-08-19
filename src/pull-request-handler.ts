@@ -170,18 +170,14 @@ export function getPullRequestPlan (
   const failingConditions = Object.entries(pullRequestStatus)
     .filter(([conditionName, conditionResult]) => conditionResult.status === 'fail')
 
-  if (pendingConditions.length > 0) {
-    return {
-      code: 'pending_condition',
-      message: markdownParagraphs([
-        'There are pending conditions:',
-        getChecksMarkdown(pullRequestStatus),
-        getCommitMessageMarkdown(pullRequestInfo, config)
-      ]),
-      actions: ['reschedule']
-    }
-  }
-
+  // Failing conditions must be checked before pending ones: a pull request
+  // with a conclusively failing condition (missing required label, changes
+  // requested, blocking body) can never merge in its current state, no matter
+  // how its pending checks resolve. Rescheduling it would monopolize the
+  // head of the repository queue and starve every other pull request
+  // whenever a pending condition never resolves (e.g. a required check that
+  // is never created). Skipping is safe: any event that changes the outcome
+  // (label added, review submitted, new push) queues the pull request again.
   if (failingConditions.length > 0) {
     return {
       code: 'failing_condition',
@@ -191,6 +187,18 @@ export function getPullRequestPlan (
         getCommitMessageMarkdown(pullRequestInfo, config)
       ]),
       actions: []
+    }
+  }
+
+  if (pendingConditions.length > 0) {
+    return {
+      code: 'pending_condition',
+      message: markdownParagraphs([
+        'There are pending conditions:',
+        getChecksMarkdown(pullRequestStatus),
+        getCommitMessageMarkdown(pullRequestInfo, config)
+      ]),
+      actions: ['reschedule']
     }
   }
 
