@@ -21,7 +21,7 @@ function isPositiveCheckRun (checkRun: CheckRun): boolean {
   return positiveCheckRunConclusions.indexOf(checkRun.conclusion) > -1
 }
 
-function getApplicableBranchProtectionRule (pullRequestInfo: PullRequestInfo): BranchProtectionRule | undefined {
+export function getApplicableBranchProtectionRule (pullRequestInfo: PullRequestInfo): BranchProtectionRule | undefined {
   const rules = pullRequestInfo.repository.branchProtectionRules.nodes
   const baseRefName = pullRequestInfo.baseRef.name
   return rules.find(rule => rule.pattern === baseRefName) ||

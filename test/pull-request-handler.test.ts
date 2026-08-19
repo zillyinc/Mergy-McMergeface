@@ -499,7 +499,7 @@ describe('executeAction with action', () => {
     })
   })
 
-  it('reschedule', async () => {
+  it('reschedule goes to the back of the queue when the base branch does not require up-to-date branches', async () => {
     const reschedulePullRequest = jest.fn(() => undefined)
     await executeAction(
       createPullRequestContext({
@@ -509,5 +509,43 @@ describe('executeAction with action', () => {
       'reschedule'
     )
     expect(reschedulePullRequest).toHaveBeenCalledTimes(1)
+    expect(reschedulePullRequest).toHaveBeenCalledWith(undefined, 'back')
+  })
+
+  it('reschedule camps at the front of the queue when branch protection requires up-to-date branches', async () => {
+    const reschedulePullRequest = jest.fn(() => undefined)
+    await executeAction(
+      createPullRequestContext({
+        reschedulePullRequest
+      }),
+      createPullRequestInfo({
+        repository: {
+          branchProtectionRules: {
+            nodes: [{
+              pattern: 'master',
+              restrictsPushes: false,
+              requiresStrictStatusChecks: true,
+              requiredStatusCheckContexts: []
+            }]
+          }
+        }
+      }),
+      'reschedule'
+    )
+    expect(reschedulePullRequest).toHaveBeenCalledWith(undefined, 'front')
+  })
+
+  it('reschedule camps at the front of the queue when a ruleset requires up-to-date branches', async () => {
+    const reschedulePullRequest = jest.fn(() => undefined)
+    await executeAction(
+      createPullRequestContext({
+        reschedulePullRequest
+      }),
+      createPullRequestInfo({
+        rulesetRequiresStrictStatusChecks: true
+      }),
+      'reschedule'
+    )
+    expect(reschedulePullRequest).toHaveBeenCalledWith(undefined, 'front')
   })
 })
