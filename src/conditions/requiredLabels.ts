@@ -1,7 +1,15 @@
 import { ConditionConfig } from './../config'
 import { PullRequestInfo } from '../models'
 import { ConditionResult } from '../condition'
-import { matchesPattern, stringifyPattern } from '../pattern'
+import { matchesPattern, stringifyPattern, Pattern } from '../pattern'
+
+export function getMissingRequiredLabels (
+  config: ConditionConfig,
+  pullRequestLabels: string[]
+): Pattern[] {
+  return config.requiredLabels
+    .filter(requiredLabelPattern => !pullRequestLabels.some(pullRequestLabel => matchesPattern(requiredLabelPattern, pullRequestLabel)))
+}
 
 export default function hasRequiredLabels (
   config: ConditionConfig,
@@ -9,8 +17,7 @@ export default function hasRequiredLabels (
 ): ConditionResult {
   const pullRequestLabels = pullRequestInfo.labels.nodes.map(label => label.name)
 
-  const missingRequiredLabelPatterns = config.requiredLabels
-    .filter(requiredLabelPattern => !pullRequestLabels.some(pullRequestLabel => matchesPattern(requiredLabelPattern, pullRequestLabel)))
+  const missingRequiredLabelPatterns = getMissingRequiredLabels(config, pullRequestLabels)
 
   if (missingRequiredLabelPatterns.length > 0) {
     return {
