@@ -23,11 +23,11 @@ async function flush () {
   }
 }
 
-function createWorker (): RepositoryWorker {
+function createWorker (onDrain: () => void = () => undefined): RepositoryWorker {
   return new RepositoryWorker(
     { owner: 'zillyinc', repo: 'zilly-backend' },
     createWorkerContext(),
-    () => undefined,
+    onDrain,
     () => undefined
   )
 }
@@ -64,6 +64,48 @@ describe('RepositoryWorker', () => {
     await flush()
 
     expect(handled).toEqual([1, 2, 1])
+  })
+
+  it('evaluates a waiting pull request immediately when an event arrives mid-poll', async () => {
+    const handled: number[] = []
+    rescheduleOnceThenRecord(handled, 1, 'back')
+
+    const worker = createWorker()
+    worker.queue(1)
+    await flush()
+    expect(handled).toEqual([1])
+
+    // A check completed on GitHub: the poll is cancelled and the pull
+    // request evaluated now, not at the next poll interval.
+    worker.queue(1)
+    await flush()
+    expect(handled).toEqual([1, 1])
+
+    // The cancelled poll must not fire a third evaluation later.
+    jest.advanceTimersByTime(1000)
+    await flush()
+    expect(handled).toEqual([1, 1])
+  })
+
+  it('defers draining while a pull request is waiting on a poll', async () => {
+    const handled: number[] = []
+    rescheduleOnceThenRecord(handled, 1, 'back')
+    const onDrain = jest.fn(() => undefined)
+
+    const worker = createWorker(onDrain)
+    worker.queue(1)
+    await flush()
+
+    // The queue is empty but the poll timer still references this worker;
+    // draining now would let a second worker spawn for the same repository.
+    expect(handled).toEqual([1])
+    expect(onDrain).not.toHaveBeenCalled()
+
+    jest.advanceTimersByTime(1000)
+    await flush()
+
+    expect(handled).toEqual([1, 1])
+    expect(onDrain).toHaveBeenCalled()
   })
 
   it('camps a front-rescheduled pull request at the head of the queue', async () => {
