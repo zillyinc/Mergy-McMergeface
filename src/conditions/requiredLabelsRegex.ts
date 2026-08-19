@@ -2,13 +2,13 @@ import { ConditionConfig } from '../config'
 import { ConditionResult } from '../condition'
 import { PullRequestInfo } from '../models'
 
-export default function hasRequiredLabelsRegex (
+export function getMissingRequiredLabelsRegex (
   config: ConditionConfig,
-  pullRequestInfo: PullRequestInfo
-): ConditionResult {
-  const pullRequestLabels = Array.from(new Set(pullRequestInfo.labels.nodes.map(label => label.name)))
+  labels: string[]
+): string[] {
+  const pullRequestLabels = Array.from(new Set(labels))
 
-  const requiredLabelsRegexMissingMatch = config.requiredLabelsRegex
+  return config.requiredLabelsRegex
     .map(function (pattern) {
       const regexObj = new RegExp(pattern, 'ig')
       const matchingLabelExist = pullRequestLabels.some(label => regexObj.test(label))
@@ -18,7 +18,17 @@ export default function hasRequiredLabelsRegex (
         return pattern
       }
     })
-    .filter(label => label != null)
+    .filter((label): label is string => label != null)
+}
+
+export default function hasRequiredLabelsRegex (
+  config: ConditionConfig,
+  pullRequestInfo: PullRequestInfo
+): ConditionResult {
+  const requiredLabelsRegexMissingMatch = getMissingRequiredLabelsRegex(
+    config,
+    pullRequestInfo.labels.nodes.map(label => label.name)
+  )
 
   if (requiredLabelsRegexMissingMatch.length > 0) {
     return {
