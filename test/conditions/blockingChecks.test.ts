@@ -30,6 +30,21 @@ function createCommitsWithCheckRuns (checkRuns: Array<Partial<CheckRun>>, status
   }
 }
 
+function createCommitsWithCheckRunsInSeparateSuites (checkRuns: Array<Partial<CheckRun>>): PullRequestInfo['commits'] {
+  return {
+    nodes: [createCommit({
+      status: null,
+      checkSuites: {
+        nodes: checkRuns.map(checkRun => createCheckSuite({
+          checkRuns: {
+            nodes: [createCheckRun(checkRun)]
+          }
+        }))
+      }
+    })]
+  }
+}
+
 describe('blockingChecks', () => {
   it('returns success when a non-required check is in progress', () => {
     const result = blockingChecks(
@@ -619,5 +634,130 @@ describe('blockingChecks', () => {
       })
     )
     expect(result).toEqual({ status: 'success' })
+  })
+
+  it('returns success when a required check failed in a superseded check suite and succeeded in the latest one', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRunsInSeparateSuites([{
+          databaseId: 1,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.FAILURE
+        }, {
+          databaseId: 2,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['required-check']
+        }])
+      })
+    )
+    expect(result).toEqual({ status: 'success' })
+  })
+
+  it('takes the newest check run rather than the last listed one', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRunsInSeparateSuites([{
+          databaseId: 2,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }, {
+          databaseId: 1,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.FAILURE
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['required-check']
+        }])
+      })
+    )
+    expect(result).toEqual({ status: 'success' })
+  })
+
+  it('returns fail when the newest check run for a required check failed after an older one succeeded', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRunsInSeparateSuites([{
+          databaseId: 1,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }, {
+          databaseId: 2,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.FAILURE
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['required-check']
+        }])
+      })
+    )
+    expect(result.status).toBe('fail')
+  })
+
+  it('returns success when a required check is left in progress in a superseded check suite', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRunsInSeparateSuites([{
+          databaseId: 1,
+          name: 'required-check',
+          status: CheckStatusState.IN_PROGRESS,
+          conclusion: null
+        }, {
+          databaseId: 2,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.SUCCESS
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['required-check']
+        }])
+      })
+    )
+    expect(result).toEqual({ status: 'success' })
+  })
+
+  it('returns pending when a required check was restarted after an older run failed', () => {
+    const result = blockingChecks(
+      createConditionConfig(),
+      createPullRequestInfo({
+        commits: createCommitsWithCheckRunsInSeparateSuites([{
+          databaseId: 1,
+          name: 'required-check',
+          status: CheckStatusState.COMPLETED,
+          conclusion: CheckConclusionState.FAILURE
+        }, {
+          databaseId: 2,
+          name: 'required-check',
+          status: CheckStatusState.IN_PROGRESS,
+          conclusion: null
+        }]),
+        baseRef: createMasterRef(),
+        repository: createRepositoryWithRules([{
+          pattern: 'master',
+          requiredStatusCheckContexts: ['required-check']
+        }])
+      })
+    )
+    expect(result.status).toBe('pending')
   })
 })
