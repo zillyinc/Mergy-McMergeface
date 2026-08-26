@@ -1,5 +1,6 @@
 import { AnyResponse } from '@octokit/rest'
 import { PullRequestInfo } from './models'
+import { CheckRun } from './github-models'
 import myappid from './myappid'
 
 export function identity<T> (v: T): T { return v }
@@ -130,8 +131,32 @@ export function getMyCheckSuite (pullRequestInfo: PullRequestInfo) {
     .filter(checkSuite => (checkSuite.app && checkSuite.app.databaseId) === myappid)[0]
 }
 
+/**
+ * Reduces check runs to the most recent one per name, which is how GitHub
+ * itself resolves the state of a required check.
+ *
+ * A single commit can carry several check runs under the same name: the same
+ * workflow runs more than once whenever it is re-run, or when a
+ * `workflow_dispatch` fires alongside the `pull_request` trigger, and every run
+ * leaves its own check run behind under its own check suite. Superseded runs
+ * are routinely cancelled or left failing, so keeping them would block a commit
+ * whose latest run is green.
+ *
+ * Check run database ids grow over time, so the highest id is the newest run.
+ */
+export function getLatestCheckRunsByName<TCheckRun extends Pick<CheckRun, 'name' | 'databaseId'>> (checkRuns: TCheckRun[]): TCheckRun[] {
+  const sortedCheckRuns = checkRuns
+    .slice()
+    .sort((a, b) => a.databaseId - b.databaseId)
+  const latestCheckRunsByName = groupByLast(
+    checkRun => checkRun.name,
+    sortedCheckRuns
+  )
+  return Object.values(latestCheckRunsByName)
+}
+
 export function getOtherCheckRuns (pullRequestInfo: PullRequestInfo) {
-  return flatMap(pullRequestInfo.commits.nodes,
+  const checkRuns = flatMap(pullRequestInfo.commits.nodes,
     commit => flatMap(commit.commit.checkSuites.nodes,
       checkSuite => checkSuite.checkRuns.nodes.map(
         checkRun => ({
@@ -140,4 +165,5 @@ export function getOtherCheckRuns (pullRequestInfo: PullRequestInfo) {
         }))
     )
   ).filter(checkRun => (checkRun.checkSuite.app && checkRun.checkSuite.app.databaseId) !== myappid)
+  return getLatestCheckRunsByName(checkRuns)
 }
